@@ -23,6 +23,10 @@ Package manager is pnpm (`packageManager: pnpm@11.9.0`).
 - `pnpm run build` — build the Node production bundle (`dist/`)
 - `pnpm run start` — run the built app with `vinext start` (plain Node HTTP server;
   respects `PORT`, defaults to 3000)
+- `node_modules/.bin/tsc --noEmit` — **the actual type-check.** `pnpm run build` (`vinext build`)
+  is Vite/esbuild-based and strips TypeScript types without checking them — it will happily
+  "succeed" on code with real type errors (e.g. a component passed props it doesn't declare).
+  Run `tsc --noEmit` separately whenever you need to know if the types actually line up.
 - `pnpm run lint` — `eslint . --ignore-pattern dist --ignore-pattern .next`
 - `pnpm run db:generate` — regenerate Drizzle migrations under `drizzle/` after editing `db/schema.ts`
 
