@@ -1,4 +1,8 @@
+import { headers } from "next/headers";
+import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { getDb } from "../../db";
+import { participants } from "../../db/schema";
 import { createClient } from "../../lib/supabase/server";
 import DashboardClient from "./dashboard-client";
 
@@ -19,6 +23,13 @@ export default async function PanelPage() {
   const organization = (Array.isArray(organizationRaw) ? organizationRaw[0] : organizationRaw) || { id:"", name:"Mi organización", plan:"free", status:"active", participant_limit:10, expires_at:null };
   const isActive = organization.status === "active" && (!organization.expires_at || new Date(organization.expires_at) > new Date());
 
+  const organizationParticipants = organization.id ? await getParticipants(organization.id) : [];
+
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "localhost:3000";
+  const protocol = requestHeaders.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+  const inviteUrl = organization.id ? `${protocol}://${host}/juego?org=${organization.id}` : "";
+
   return <DashboardClient
     fullName={profile?.full_name || "Administrador"}
     email={user.email || ""}
@@ -30,5 +41,25 @@ export default async function PanelPage() {
     participantLimit={organization.participant_limit}
     expiresAt={organization.expires_at}
     isActive={isActive}
+    organizationId={organization.id}
+    inviteUrl={inviteUrl}
+    participants={organizationParticipants}
   />;
+}
+
+type PanelParticipant = { id: string; name: string; email: string; phone: string; createdAt: string };
+
+async function getParticipants(organizationId: string): Promise<PanelParticipant[]> {
+  try {
+    const rows = await getDb().select().from(participants).where(eq(participants.organizationId, organizationId)).orderBy(desc(participants.createdAt));
+    return rows.map((participant) => ({
+      id: participant.id,
+      name: participant.name,
+      email: participant.email,
+      phone: participant.phone,
+      createdAt: participant.createdAt.toISOString(),
+    }));
+  } catch {
+    return [];
+  }
 }
