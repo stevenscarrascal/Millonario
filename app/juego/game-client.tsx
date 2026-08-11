@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { BankQuestion, extraQuestions } from "../question-bank";
+import { isCertificateEligible } from "../../lib/certificates";
 
 type Question = {
   id?: string;
@@ -559,6 +560,7 @@ export default function GameClient({ organizationId }: { organizationId: string 
           <div className="end-stats"><span>{level}</span><span>Índice de dominio: {Math.min(100, Math.round(mastery / 2.2))}%</span></div>
         </div>
         <button className="primary" onClick={restart}>JUGAR DE NUEVO <span>↻</span></button>
+        {participantId && isCertificateEligible(level) && <a className="certificate-download" href={`/api/certificates/${participantId}`}>DESCARGAR CERTIFICADO ↓</a>}
       </section>}
       <footer>Experiencia educativa de compliance · Contenido basado en estándares internacionales</footer>
     </main>
