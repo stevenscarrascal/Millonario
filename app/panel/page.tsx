@@ -47,7 +47,7 @@ export default async function PanelPage() {
   />;
 }
 
-type PanelParticipant = { id: string; name: string; email: string; phone: string; createdAt: string };
+type PanelParticipant = { id: string; name: string; email: string; phone: string; createdAt: string; finishedAt: string | null; winningsPoints: number | null; level: string | null; masteryPercent: number | null };
 
 async function getParticipants(organizationId: string): Promise<PanelParticipant[]> {
   try {
@@ -58,6 +58,10 @@ async function getParticipants(organizationId: string): Promise<PanelParticipant
       email: participant.email,
       phone: participant.phone,
       createdAt: participant.createdAt.toISOString(),
+      finishedAt: participant.finishedAt ? participant.finishedAt.toISOString() : null,
+      winningsPoints: participant.winningsPoints,
+      level: participant.level,
+      masteryPercent: participant.masteryPercent,
     }));
   } catch {
     return [];
