@@ -16,6 +16,10 @@ export const participants = sqliteTable("participants", {
   phone: text("phone").notNull(),
   consent: integer("consent", { mode: "boolean" }).notNull().default(true),
   organizationId: text("organization_id"),
+  finishedAt: integer("finished_at", { mode: "timestamp" }),
+  winningsPoints: integer("winnings_points"),
+  level: text("level"),
+  masteryPercent: integer("mastery_percent"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 }, (table) => [
   index("participants_organization_id_idx").on(table.organizationId),

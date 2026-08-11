@@ -22,7 +22,11 @@ CREATE TABLE IF NOT EXISTS participants (
   phone TEXT NOT NULL,
   consent INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL,
-  organization_id TEXT
+  organization_id TEXT,
+  finished_at INTEGER,
+  winnings_points INTEGER,
+  level TEXT,
+  mastery_percent INTEGER
 );
 CREATE TABLE IF NOT EXISTS subscribers (
   id TEXT PRIMARY KEY,
@@ -50,6 +54,10 @@ export function getDb() {
     sqlite.pragma("journal_mode = WAL");
     sqlite.exec(BOOTSTRAP_SQL);
     ensureColumn(sqlite, "participants", "organization_id", "TEXT");
+    ensureColumn(sqlite, "participants", "finished_at", "INTEGER");
+    ensureColumn(sqlite, "participants", "winnings_points", "INTEGER");
+    ensureColumn(sqlite, "participants", "level", "TEXT");
+    ensureColumn(sqlite, "participants", "mastery_percent", "INTEGER");
     sqlite.exec("CREATE INDEX IF NOT EXISTS participants_organization_id_idx ON participants (organization_id)");
     db = drizzle(sqlite, { schema });
   }
