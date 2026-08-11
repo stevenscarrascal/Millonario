@@ -469,7 +469,7 @@ export default function GameClient({ organizationId }: { organizationId: string 
       {screen === "avatar" && <section className="avatar-screen panel">
         <p className="eyebrow">TU LUGAR EN EL JUEGO</p><h2>Elige tu avatar</h2><p className="muted">Este personaje te representará durante todo el desafío.</p>
         <div className="avatar-preview"><Avatar index={avatar} /><b>{profile.name || "Participante"}</b><span>ESPECIALISTA EN COMPLIANCE</span></div>
-        <div className="avatar-grid">{avatarOptions.map((_, i) => <button key={i} onClick={() => setAvatar(i)} className={avatar === i ? "chosen" : ""}><Avatar index={i} small /><span>{avatar === i ? "✓" : ""}</span></button>)}</div>
+        <div className="avatar-grid">{avatarOptions.map((option, i) => <button key={i} onClick={() => setAvatar(i)} className={avatar === i ? "chosen" : ""} style={{ background: option.suit }} aria-label={`Avatar ${i + 1}`} aria-pressed={avatar === i} />)}</div>
         <button className="primary" onClick={() => { setGameQuestions(createQuestionSet()); setMastery(0); setAdaptiveExtreme(false); questionStartedAt.current = Date.now(); lifelineUsedOnQuestion.current = false; startMusic(0); setScreen("game"); window.setTimeout(() => cue("enter-stage", "select"), 180); }}>OCUPAR MI LUGAR <span>›</span></button>
       </section>}
 
@@ -534,10 +534,17 @@ export default function GameClient({ organizationId }: { organizationId: string 
         })}<p>◆ NIVEL SEGURO</p></aside>
       </section>}
 
-      {screen === "end" && <section className="end panel">
-        <div className="trophy">◆</div><p className="eyebrow">PARTIDA FINALIZADA</p><h2>{endTitle}</h2><Avatar index={avatar} /><h3>{profile.name}</h3>
-        <div className="final-score"><small>RESULTADO FINAL</small><b>{winnings}</b><span>PUNTOS</span></div>
-        <p className="muted">Nivel alcanzado: <strong>{level}</strong> · Índice de dominio: <strong>{Math.min(100, Math.round(mastery / 2.2))}%</strong></p><button className="primary" onClick={restart}>JUGAR DE NUEVO <span>↻</span></button>
+      {screen === "end" && <section className={`end panel ${winnings === "1.000.000" ? "win" : "lose"}`}>
+        <p className="eyebrow">PARTIDA FINALIZADA</p><h2>{endTitle}</h2><Avatar index={avatar} /><h3>{profile.name}</h3>
+        <div className="final-score">
+          <i className="accent-bar" />
+          <small>RESULTADO FINAL</small>
+          <b>{winnings}</b>
+          <span>PUNTOS</span>
+          <div className="score-bar"><i style={{ width: `${Math.min(100, Math.round(mastery / 2.2))}%` }} /></div>
+          <div className="end-stats"><span>{level}</span><span>Índice de dominio: {Math.min(100, Math.round(mastery / 2.2))}%</span></div>
+        </div>
+        <button className="primary" onClick={restart}>JUGAR DE NUEVO <span>↻</span></button>
       </section>}
       <footer>Experiencia educativa de compliance · Contenido basado en estándares internacionales</footer>
     </main>
