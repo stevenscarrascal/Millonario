@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { logout } from "../login/actions";
 import { createClient } from "../../lib/supabase/client";
+import { isCertificateEligible } from "../../lib/certificates";
 
 type Tab = "overview" | "participants" | "experiences" | "reports" | "certificates" | "plan" | "settings";
-type Participant = { id: string; name: string; email: string; phone: string; createdAt: string };
+type Participant = { id: string; name: string; email: string; phone: string; createdAt: string; finishedAt: string | null; winningsPoints: number | null; level: string | null; masteryPercent: number | null };
 
 type DashboardProps = {
   fullName: string;
@@ -44,6 +45,33 @@ const availablePlans = [
 function formatExpiry(value: string | null) {
   return value ? new Intl.DateTimeFormat("es-CO", { dateStyle:"medium" }).format(new Date(value)) : "Sin vencimiento";
 }
+function formatPoints(value: number | null) {
+  return value == null ? "—" : new Intl.NumberFormat("es-CO").format(value);
+}
+function formatMastery(value: number | null) {
+  return value == null ? "—" : `${value}%`;
+}
+function formatFinished(value: string | null) {
+  return value ? new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
+}
+function slugify(value: string) {
+  return value.trim().toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+function downloadReportCsv(participants: Participant[], organizationName: string) {
+  const header = ["Nombre", "Correo", "Nivel", "Puntos", "% Dominio", "Fecha", "Certificado"];
+  const rows = participants.filter(p => p.finishedAt).map(p => [
+    p.name, p.email, p.level ?? "", String(p.winningsPoints ?? ""), String(p.masteryPercent ?? ""),
+    formatFinished(p.finishedAt), isCertificateEligible(p.level) ? "Sí" : "No",
+  ]);
+  const csv = [header, ...rows].map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `reporte-${slugify(organizationName)}-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function DashboardClient(props: DashboardProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -52,6 +80,11 @@ export default function DashboardClient(props: DashboardProps) {
   const [activatingPlan, setActivatingPlan] = useState<string | null>(null);
   const [planMessage, setPlanMessage] = useState<{ kind:"success" | "error"; text:string } | null>(null);
   const usedParticipants = props.participants.length;
+  const finishedParticipants = props.participants.filter(p => p.finishedAt);
+  const certifiedParticipants = props.participants.filter(p => isCertificateEligible(p.level));
+  const averageMastery = finishedParticipants.length
+    ? Math.round(finishedParticipants.reduce((sum, p) => sum + (p.masteryPercent ?? 0), 0) / finishedParticipants.length)
+    : null;
   const usage = Math.round((usedParticipants / currentPlan.limit) * 100);
   const firstName = props.fullName.split(" ")[0] || "administrador";
   const expiry = formatExpiry(currentPlan.expiresAt);
@@ -90,7 +123,7 @@ export default function DashboardClient(props: DashboardProps) {
 
       {activeTab === "overview" && <>
         <div className="dashboard-actions"><a className="launch-game" href={currentPlan.isActive ? "/juego" : "/#precios"}><i>▶</i><div><small>ACCIÓN PRINCIPAL</small><b>{currentPlan.isActive ? "Iniciar una experiencia" : "Activar un plan"}</b></div><span>→</span></a><button onClick={()=>go("participants")}><i>＋</i><div><small>GESTIÓN</small><b>Invitar participantes</b></div><span>→</span></button><button onClick={()=>go("reports")}><i>↗</i><div><small>ANÁLISIS</small><b>Ver resultados</b></div><span>→</span></button></div>
-        <div className="metric-grid"><article><small>PARTICIPANTES REGISTRADOS</small><b>{usedParticipants}</b><span>de {currentPlan.limit} disponibles</span><div><i style={{width:`${usage}%`}}/></div></article><article><small>EXPERIENCIAS REALIZADAS</small><b>0</b><span>Comienza tu primera activación</span><em>↗</em></article><article><small>PROMEDIO DE CONOCIMIENTO</small><b>—</b><span>Aparecerá después del primer juego</span><em>◎</em></article><article><small>CERTIFICADOS EMITIDOS</small><b>0</b><span>Disponibles según tu plan</span><em>◆</em></article></div>
+        <div className="metric-grid"><article><small>PARTICIPANTES REGISTRADOS</small><b>{usedParticipants}</b><span>de {currentPlan.limit} disponibles</span><div><i style={{width:`${usage}%`}}/></div></article><article><small>EXPERIENCIAS REALIZADAS</small><b>{finishedParticipants.length}</b><span>{finishedParticipants.length === 0 ? "Comienza tu primera activación" : "Partidas completadas"}</span><em>↗</em></article><article><small>PROMEDIO DE CONOCIMIENTO</small><b>{averageMastery == null ? "—" : `${averageMastery}%`}</b><span>{averageMastery == null ? "Aparecerá después del primer juego" : "Índice de dominio promedio"}</span><em>◎</em></article><article><small>CERTIFICADOS EMITIDOS</small><b>{certifiedParticipants.length}</b><span>Disponibles según tu plan</span><em>◆</em></article></div>
         <div className="dashboard-grid"><ExperiencePanel compact planCode={currentPlan.code}/><PlanPanel {...props} plan={currentPlan.name} planCode={currentPlan.code} status={currentPlan.status} participantLimit={currentPlan.limit} expiresAt={currentPlan.expiresAt} isActive={currentPlan.isActive} expiry={expiry}/></div>
         <ParticipantsPanel participants={props.participants} onInvite={()=>setInviteOpen(true)} />
       </>}
@@ -99,7 +132,7 @@ export default function DashboardClient(props: DashboardProps) {
 
       {activeTab === "experiences" && <section className="tab-screen"><div className="tab-toolbar"><div><small>BIBLIOTECA DE CONTENIDOS</small><h2>Juegos y contenidos</h2><p>Activa experiencias de compliance para toda tu organización.</p></div><a href="/juego">INICIAR JUEGO →</a></div><ExperiencePanel planCode={currentPlan.code}/><div className="content-topics"><h3>Temas incluidos</h3><div>{["Ética empresarial","Anticorrupción","LA/FT","Conflictos de interés","Protección de datos","Canales de denuncia","GAFI","ONU y OCDE"].map(topic=><span key={topic}>◆ {topic}</span>)}</div></div></section>}
 
-      {activeTab === "reports" && <section className="tab-screen"><div className="tab-toolbar"><div><small>ANÁLISIS DE DESEMPEÑO</small><h2>Reportes</h2><p>Conoce fortalezas, brechas y evolución del conocimiento de tu equipo.</p></div><button disabled>EXPORTAR REPORTE</button></div><div className="report-placeholder"><div className="fake-chart"><i/><i/><i/><i/><i/><i/><i/></div><span>▥</span><h3>Tu primer reporte aparecerá aquí</h3><p>Los resultados se consolidan automáticamente después de cada experiencia.</p><a href="/juego">INICIAR UNA EXPERIENCIA →</a></div></section>}
+      {activeTab === "reports" && <section className="tab-screen"><div className="tab-toolbar"><div><small>ANÁLISIS DE DESEMPEÑO</small><h2>Reportes</h2><p>Conoce fortalezas, brechas y evolución del conocimiento de tu equipo.</p></div><button disabled={finishedParticipants.length === 0} onClick={() => downloadReportCsv(props.participants, props.organizationName)}>EXPORTAR REPORTE</button></div><ReportsPanel participants={props.participants} /></section>}
 
       {activeTab === "certificates" && <section className="tab-screen"><div className="tab-toolbar"><div><small>RECONOCIMIENTO</small><h2>Certificados</h2><p>Emite y consulta certificados para quienes completen los retos definidos.</p></div><button disabled>CONFIGURAR PLANTILLA</button></div><div className="certificate-preview"><div><span>C</span><small>CERTIFICADO DE PARTICIPACIÓN</small><h3>Compliance Challenge</h3><i>Otorgado por completar satisfactoriamente<br/>la experiencia internacional de cumplimiento.</i><b>{props.organizationName}</b></div><aside><span>0</span><h3>Certificados emitidos</h3><p>Cuando tus participantes completen una experiencia aparecerán aquí.</p></aside></div></section>}
 
@@ -130,6 +163,24 @@ function ParticipantsPanel({ participants, onInvite, embedded = false }: { parti
     <table>
       <thead><tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Fecha</th></tr></thead>
       <tbody>{participants.map((participant) => <tr key={participant.id}><td>{participant.name}</td><td>{participant.email}</td><td>{participant.phone}</td><td>{new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(participant.createdAt))}</td></tr>)}</tbody>
+    </table>
+  </section>;
+}
+
+function ReportsPanel({ participants }: { participants: Participant[] }) {
+  const finished = participants.filter(p => p.finishedAt);
+  if (finished.length === 0) {
+    return <div className="report-placeholder"><div className="fake-chart"><i/><i/><i/><i/><i/><i/><i/></div><span>▥</span><h3>Tu primer reporte aparecerá aquí</h3><p>Los resultados se consolidan automáticamente después de cada experiencia.</p><a href="/juego">INICIAR UNA EXPERIENCIA →</a></div>;
+  }
+  return <section className="dashboard-panel participants-list embedded">
+    <table>
+      <thead><tr><th>Nombre</th><th>Correo</th><th>Nivel</th><th>Puntos</th><th>% Dominio</th><th>Fecha</th><th>Certificado</th></tr></thead>
+      <tbody>{finished.map((participant) => <tr key={participant.id}>
+        <td>{participant.name}</td><td>{participant.email}</td><td>{participant.level}</td>
+        <td>{formatPoints(participant.winningsPoints)}</td><td>{formatMastery(participant.masteryPercent)}</td>
+        <td>{formatFinished(participant.finishedAt)}</td>
+        <td>{isCertificateEligible(participant.level) ? <b className="status-active">✓</b> : <b className="status-expired">—</b>}</td>
+      </tr>)}</tbody>
     </table>
   </section>;
 }
