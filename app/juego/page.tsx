@@ -1,7 +1,5 @@
-import { createClient } from "../../lib/supabase/server";
+import { getPublicOrganization } from "../../lib/organizations";
 import GameClient from "./game-client";
-
-type PublicOrganization = { name: string; is_active: boolean };
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +20,4 @@ export default async function JuegoPage({ searchParams }: { searchParams: Promis
   }
 
   return <GameClient organizationId={org as string} />;
-}
-
-async function getPublicOrganization(organizationId: string): Promise<PublicOrganization | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_public_organization", { org_id: organizationId });
-  if (error || !data) return null;
-  return data as PublicOrganization;
 }
