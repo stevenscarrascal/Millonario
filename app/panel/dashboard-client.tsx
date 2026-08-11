@@ -5,17 +5,22 @@ import { logout } from "../login/actions";
 import { createClient } from "../../lib/supabase/client";
 
 type Tab = "overview" | "participants" | "experiences" | "reports" | "certificates" | "plan" | "settings";
+type Participant = { id: string; name: string; email: string; phone: string; createdAt: string };
+
 type DashboardProps = {
   fullName: string;
   email: string;
   role: string;
   organizationName: string;
+  organizationId: string;
   plan: string;
   planCode: string;
   status: string;
   participantLimit: number;
   expiresAt: string | null;
   isActive: boolean;
+  inviteUrl: string;
+  participants: Participant[];
 };
 
 const menu: { id: Tab; icon: string; label: string }[] = [
@@ -46,7 +51,7 @@ export default function DashboardClient(props: DashboardProps) {
   const [currentPlan, setCurrentPlan] = useState({ name:props.plan, code:props.planCode, status:props.status, limit:props.participantLimit, expiresAt:props.expiresAt, isActive:props.isActive });
   const [activatingPlan, setActivatingPlan] = useState<string | null>(null);
   const [planMessage, setPlanMessage] = useState<{ kind:"success" | "error"; text:string } | null>(null);
-  const usedParticipants = 0;
+  const usedParticipants = props.participants.length;
   const usage = Math.round((usedParticipants / currentPlan.limit) * 100);
   const firstName = props.fullName.split(" ")[0] || "administrador";
   const expiry = formatExpiry(currentPlan.expiresAt);
@@ -87,10 +92,10 @@ export default function DashboardClient(props: DashboardProps) {
         <div className="dashboard-actions"><a className="launch-game" href={currentPlan.isActive ? "/juego" : "/#precios"}><i>▶</i><div><small>ACCIÓN PRINCIPAL</small><b>{currentPlan.isActive ? "Iniciar una experiencia" : "Activar un plan"}</b></div><span>→</span></a><button onClick={()=>go("participants")}><i>＋</i><div><small>GESTIÓN</small><b>Invitar participantes</b></div><span>→</span></button><button onClick={()=>go("reports")}><i>↗</i><div><small>ANÁLISIS</small><b>Ver resultados</b></div><span>→</span></button></div>
         <div className="metric-grid"><article><small>PARTICIPANTES REGISTRADOS</small><b>{usedParticipants}</b><span>de {currentPlan.limit} disponibles</span><div><i style={{width:`${usage}%`}}/></div></article><article><small>EXPERIENCIAS REALIZADAS</small><b>0</b><span>Comienza tu primera activación</span><em>↗</em></article><article><small>PROMEDIO DE CONOCIMIENTO</small><b>—</b><span>Aparecerá después del primer juego</span><em>◎</em></article><article><small>CERTIFICADOS EMITIDOS</small><b>0</b><span>Disponibles según tu plan</span><em>◆</em></article></div>
         <div className="dashboard-grid"><ExperiencePanel compact planCode={currentPlan.code}/><PlanPanel {...props} plan={currentPlan.name} planCode={currentPlan.code} status={currentPlan.status} participantLimit={currentPlan.limit} expiresAt={currentPlan.expiresAt} isActive={currentPlan.isActive} expiry={expiry}/></div>
-        <EmptyParticipants onInvite={()=>setInviteOpen(true)} />
+        <ParticipantsPanel participants={props.participants} onInvite={()=>setInviteOpen(true)} />
       </>}
 
-      {activeTab === "participants" && <section className="tab-screen"><div className="tab-toolbar"><div><small>GESTIÓN DEL EQUIPO</small><h2>Participantes</h2><p>Invita, consulta y administra las personas que pueden participar en tus experiencias.</p></div><button onClick={()=>setInviteOpen(true)}>＋ INVITAR PARTICIPANTES</button></div><div className="participant-summary"><article><b>0</b><span>Registrados</span></article><article><b>{currentPlan.limit}</b><span>Cupos disponibles</span></article><article><b>0%</b><span>Uso del plan</span></article></div><EmptyParticipants onInvite={()=>setInviteOpen(true)} embedded/></section>}
+      {activeTab === "participants" && <section className="tab-screen"><div className="tab-toolbar"><div><small>GESTIÓN DEL EQUIPO</small><h2>Participantes</h2><p>Invita, consulta y administra las personas que pueden participar en tus experiencias.</p></div><button onClick={()=>setInviteOpen(true)}>＋ INVITAR PARTICIPANTES</button></div><div className="participant-summary"><article><b>{usedParticipants}</b><span>Registrados</span></article><article><b>{currentPlan.limit}</b><span>Cupos disponibles</span></article><article><b>{usage}%</b><span>Uso del plan</span></article></div><ParticipantsPanel participants={props.participants} onInvite={()=>setInviteOpen(true)} embedded/></section>}
 
       {activeTab === "experiences" && <section className="tab-screen"><div className="tab-toolbar"><div><small>BIBLIOTECA DE CONTENIDOS</small><h2>Juegos y contenidos</h2><p>Activa experiencias de compliance para toda tu organización.</p></div><a href="/juego">INICIAR JUEGO →</a></div><ExperiencePanel planCode={currentPlan.code}/><div className="content-topics"><h3>Temas incluidos</h3><div>{["Ética empresarial","Anticorrupción","LA/FT","Conflictos de interés","Protección de datos","Canales de denuncia","GAFI","ONU y OCDE"].map(topic=><span key={topic}>◆ {topic}</span>)}</div></div></section>}
 
@@ -102,7 +107,7 @@ export default function DashboardClient(props: DashboardProps) {
 
       {activeTab === "settings" && <section className="tab-screen"><div className="tab-toolbar"><div><small>CUENTA Y ORGANIZACIÓN</small><h2>Configuración</h2><p>Consulta la información asociada al acceso empresarial.</p></div></div><div className="settings-grid"><article><small>PERFIL</small><h3>{props.fullName}</h3><span>{props.email}</span><b>{props.role === "owner" ? "Propietario de la cuenta" : "Administrador"}</b><button disabled>EDITAR PERFIL — PRÓXIMAMENTE</button></article><article><small>ORGANIZACIÓN</small><h3>{props.organizationName}</h3><span>Plan {currentPlan.name}</span><b>Datos aislados y protegidos por empresa</b><button disabled>PERSONALIZAR MARCA — PRÓXIMAMENTE</button></article><article><small>SEGURIDAD</small><h3>Acceso protegido</h3><span>Autenticación administrada por Supabase</span><b>Sesión y políticas de acceso activas</b><form action={logout}><button>CERRAR TODAS MIS SESIONES</button></form></article></div></section>}
 
-      {inviteOpen && <div className="invite-modal" role="dialog" aria-modal="true" aria-label="Invitar participantes"><button className="modal-close" onClick={()=>setInviteOpen(false)}>×</button><p>INVITAR PARTICIPANTES</p><h2>Comparte tu próxima experiencia.</h2><span>Cuando actives un juego, aquí aparecerá un enlace único para que tu equipo se registre y participe.</span><div>cumplimiento.co/juego/<b>próxima-sesión</b></div><button onClick={()=>{navigator.clipboard?.writeText("http://localhost:3000/juego"); setInviteOpen(false)}}>COPIAR ENLACE DEL JUEGO →</button></div>}
+      {inviteOpen && <div className="invite-modal" role="dialog" aria-modal="true" aria-label="Invitar participantes"><button className="modal-close" onClick={()=>setInviteOpen(false)}>×</button><p>INVITAR PARTICIPANTES</p><h2>Comparte tu enlace de participación.</h2><span>Cualquier persona con este enlace puede registrarse y jugar como parte de {props.organizationName}.</span><div>{props.inviteUrl}</div><button onClick={()=>{navigator.clipboard?.writeText(props.inviteUrl); setInviteOpen(false)}}>COPIAR ENLACE DEL JUEGO →</button></div>}
       <footer>La información de tu organización está protegida y aislada mediante políticas de acceso por empresa.</footer>
     </section>
   </main>;
@@ -116,6 +121,15 @@ function PlanPanel(props: DashboardProps & { expiry: string }) {
   return <section className="dashboard-panel plan-panel"><header><div><small>VIGENCIA</small><h2>Plan {props.plan}</h2></div><b className={props.isActive ? "status-active" : "status-expired"}>{props.isActive ? "● ACTIVO" : "● INACTIVO"}</b></header><div className="plan-detail"><span><small>PARTICIPANTES</small><b>{props.participantLimit}</b></span><span><small>VENCE</small><b>{props.expiry}</b></span></div><a href="/#precios">ADMINISTRAR PLAN →</a></section>;
 }
 
-function EmptyParticipants({ onInvite, embedded = false }: { onInvite: () => void; embedded?: boolean }) {
-  return <section className={`dashboard-panel empty-participants ${embedded ? "embedded" : ""}`}><header><div><small>EQUIPO</small><h2>Participantes recientes</h2></div><button onClick={onInvite}>＋ INVITAR PARTICIPANTES</button></header><div><span>◎</span><h3>Aún no hay participantes</h3><p>Invita a tu equipo o comparte el enlace de una experiencia para comenzar.</p><button onClick={onInvite}>PREPARAR INVITACIÓN →</button></div></section>;
+function ParticipantsPanel({ participants, onInvite, embedded = false }: { participants: Participant[]; onInvite: () => void; embedded?: boolean }) {
+  if (participants.length === 0) {
+    return <section className={`dashboard-panel empty-participants ${embedded ? "embedded" : ""}`}><header><div><small>EQUIPO</small><h2>Participantes recientes</h2></div><button onClick={onInvite}>＋ INVITAR PARTICIPANTES</button></header><div><span>◎</span><h3>Aún no hay participantes</h3><p>Invita a tu equipo o comparte el enlace de una experiencia para comenzar.</p><button onClick={onInvite}>PREPARAR INVITACIÓN →</button></div></section>;
+  }
+  return <section className={`dashboard-panel participants-list ${embedded ? "embedded" : ""}`}>
+    <header><div><small>EQUIPO</small><h2>Participantes recientes</h2></div><button onClick={onInvite}>＋ INVITAR PARTICIPANTES</button></header>
+    <table>
+      <thead><tr><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Fecha</th></tr></thead>
+      <tbody>{participants.map((participant) => <tr key={participant.id}><td>{participant.name}</td><td>{participant.email}</td><td>{participant.phone}</td><td>{new Intl.DateTimeFormat("es-CO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(participant.createdAt))}</td></tr>)}</tbody>
+    </table>
+  </section>;
 }
