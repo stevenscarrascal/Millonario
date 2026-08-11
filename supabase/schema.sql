@@ -129,3 +129,36 @@ create policy "Users can view own organization" on public.organizations
   for select using (
     id in (select organization_id from public.profiles where id = auth.uid())
   );
+
+-- ---------------------------------------------------------------------------
+-- Public organization lookup — used by /juego (sin sesión) para validar el
+-- link de invitación (?org=<id>) antes de mostrar el juego. Solo expone lo
+-- mínimo necesario (nombre + si el plan está activo); nunca plan, límite de
+-- participantes ni fecha de vencimiento exacta.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.get_public_organization(org_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_org record;
+begin
+  select name, status, expires_at into v_org
+  from public.organizations
+  where id = org_id;
+
+  if not found then
+    return null;
+  end if;
+
+  return jsonb_build_object(
+    'name', v_org.name,
+    'is_active', v_org.status = 'active' and (v_org.expires_at is null or v_org.expires_at > now())
+  );
+end;
+$$;
+
+grant execute on function public.get_public_organization(uuid) to anon, authenticated;
