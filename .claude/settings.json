@@ -100,7 +100,11 @@
       "Bash(node -e \"const fs=require\\('fs'\\); const b=fs.readFileSync\\('task10-cert-downloaded.pdf'\\); console.log\\('size:', b.length, 'first4:', b.slice\\(0,4\\).toString\\('latin1'\\)\\);\")",
       "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Format-Table -AutoSize\")",
       "Bash(powershell -Command \"Stop-Process -Id 29992 -Force\")",
-      "Bash(taskkill //PID 29992 //F)"
+      "Bash(taskkill //PID 29992 //F)",
+      "Bash(pm2 delete *)",
+      "Bash(pm2 start *)",
+      "Bash(curl -s -o /dev/null -w \"http_code=%{http_code}\\\\n\" http://localhost:3345/)",
+      "Bash(pm2 status *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\steve\\Downloads\\Millonario\\Millonario\\app\\api\\participants",
