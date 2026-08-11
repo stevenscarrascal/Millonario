@@ -196,6 +196,7 @@ export default function GameClient({ organizationId }: { organizationId: string 
   const [gameQuestions, setGameQuestions] = useState<Question[]>(questions);
   const [profile, setProfile] = useState({ name: "", email: "", phone: "" });
   const [avatar, setAvatar] = useState(2);
+  const [participantId, setParticipantId] = useState<string | null>(null);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [locked, setLocked] = useState(false);
@@ -331,7 +332,11 @@ export default function GameClient({ organizationId }: { organizationId: string 
   async function register(e: FormEvent) {
     e.preventDefault();
     try {
-      await fetch("/api/participants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...profile, organizationId }) });
+      const response = await fetch("/api/participants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...profile, organizationId }) });
+      if (response.ok) {
+        const data = await response.json() as { id: string };
+        setParticipantId(data.id);
+      }
     } catch { /* La experiencia puede continuar si la red está temporalmente fuera. */ }
     setScreen("avatar");
   }
@@ -418,6 +423,15 @@ export default function GameClient({ organizationId }: { organizationId: string 
     stopMusic();
     if (amount === "1.000.000") cue("million-win", "win"); else cue("game-over", "wrong");
     setEndTitle(title); setWinnings(amount); setScreen("end");
+    if (participantId) {
+      const winningsPoints = Number(amount.replace(/\./g, ""));
+      const masteryPercent = Math.min(100, Math.round(mastery / 2.2));
+      fetch(`/api/participants/${participantId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ winningsPoints, level, masteryPercent }),
+      }).catch(() => undefined);
+    }
   }
 
   function restart() {
