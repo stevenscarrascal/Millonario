@@ -201,6 +201,7 @@ footer { z-index:1; color:#526184; font-size:8px; letter-spacing:1px; padding:14
 .participants-list th { color:#6c84a8; background:#070c1c; font-size:6px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; }
 .participants-list td { color:#c7d2e7; }
 .participants-list tr:last-child td { border-bottom:0; }
+.participants-list td a.download-link { display:inline-block; padding:6px 12px; border:1px solid #4b6d97; border-radius:6px; color:#9bcbff; font-size:8px; font-weight:bold; letter-spacing:.5px; text-decoration:none; }
 @keyframes tab-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media(max-width:900px){.dashboard-sidebar nav button{white-space:nowrap}.content-topics>div{grid-template-columns:1fr 1fr}.certificate-preview{grid-template-columns:1fr}.full-plan-card{grid-template-columns:1fr}.full-plan-card>div:nth-child(2){grid-template-columns:1fr 1fr 1fr}.settings-grid{grid-template-columns:1fr}.tab-toolbar{align-items:flex-start;flex-direction:column}.tab-toolbar>a,.tab-toolbar>button{align-self:flex-start}}
 @media(max-width:550px){.dashboard-sidebar nav button:nth-child(n+5){display:none}.plan-warning button{margin-left:0}.participant-summary{grid-template-columns:1fr}.content-topics>div{grid-template-columns:1fr}.certificate-preview{padding:15px}.certificate-preview>div{padding:25px 10px}.certificate-preview>div h3{font-size:26px}.full-plan-card{padding:22px}.full-plan-card>div:nth-child(2){grid-template-columns:1fr}.tab-screen{margin-top:20px}}
@@ -296,6 +297,7 @@ html[data-theme="light"] .participants-list th,
 html[data-theme="light"] .participants-list td { border-color:#d6e1ec; }
 html[data-theme="light"] .participants-list th { color:#526b87; background:#edf4fb; }
 html[data-theme="light"] .participants-list td { color:#1d3657; }
+html[data-theme="light"] .participants-list td a.download-link { border-color:#8fb4d8; color:#1f5c96; }
 html[data-theme="light"] .pricing-comparison th:last-child,
 html[data-theme="light"] .pricing-comparison td:last-child { background:#fff7df; }
 html[data-theme="light"] .enterprise-scale { color:#203b5d; border-color:#dfb65b; background:linear-gradient(120deg,#fff8e8,#fff 52%,#eaf5ff); }
