@@ -15,6 +15,13 @@
       "when": 1785681982964,
       "tag": "0001_brown_wolfpack",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786456724959,
+      "tag": "0002_smiling_jane_foster",
+      "breakpoints": true
     }
   ]
 }

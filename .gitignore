@@ -40,3 +40,6 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# local SQLite data (leads/participants/subscribers) — lives on the server, not in git
+/data/

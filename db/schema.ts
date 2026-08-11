@@ -1,5 +1,14 @@
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+export const leads = sqliteTable("leads", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  company: text("company").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+});
+
 export const participants = sqliteTable("participants", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

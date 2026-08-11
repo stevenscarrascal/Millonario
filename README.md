@@ -1,98 +1,88 @@
-# vinext-starter
+# Cumplimiento
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Sitio de marketing + juego de formación en compliance ("El Reto Internacional"),
+construido con [vinext](https://github.com/cloudflare/vinext) (Next.js App Router
+sobre Vite) corriendo como servidor Node.js estándar — sin Cloudflare Workers.
 
-## Prerequisites
+## Prerequisitos
 
 - Node.js `>=22.13.0`
+- pnpm (`packageManager: pnpm@11.9.0`)
+- Un proyecto de [Supabase](https://supabase.com) (auth + `profiles`/`organizations`)
 
-## Quick Start
+## Quick start (local)
 
 ```bash
-npm install
-npm run dev
-npm run build
+pnpm install
+pnpm run dev
 ```
 
-This starter does not use `wrangler.jsonc`.
+Copia `.env.example` a `.env.local` y completa las credenciales de Supabase antes
+de arrancar. Si es un proyecto de Supabase nuevo (vacío), corré primero
+`supabase/schema.sql` — ver sección "Base de datos de Supabase" abajo.
 
-## Included Shape
+## Comandos
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+- `pnpm run dev` — desarrollo local
+- `pnpm run build` — build de producción (Node, no Cloudflare)
+- `pnpm run start` — levanta el servidor de producción ya compilado (usa `PORT`, default `3000`)
+- `pnpm run lint` — ESLint
+- `pnpm run db:generate` — regenera migraciones de Drizzle tras editar `db/schema.ts`
 
-## Workspace Auth Headers
+## Base de datos de Supabase
 
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
+`profiles`, `organizations` y la función `activate_preview_plan` no se crean solas: hay
+que correr `supabase/schema.sql` una vez contra tu proyecto de Supabase (Studio →
+SQL Editor → New query → pegar el contenido del archivo → Run). Es idempotente, se
+puede volver a correr sin romper nada. Incluye:
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
+- Las tablas `organizations` y `profiles`.
+- Un trigger sobre `auth.users` que crea la organización y el perfil automáticamente
+  cuando alguien se registra (usa `full_name`/`company` que manda `signUp()`).
+- La función `activate_preview_plan` que usa el panel para cambiar de plan sin cobro.
+- Políticas de Row Level Security para que cada usuario solo vea su propio perfil/organización.
 
-Treat the full name as optional and fall back to email when it is absent:
+Si además cambiás de proyecto de Supabase, actualizá `.env.local` con la nueva
+`NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` **antes** de probar
+signup/login.
 
-```tsx
-import { headers } from "next/headers";
+## Datos
 
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
+- **Supabase (Postgres)**: autenticación y datos de cuenta (`profiles`, `organizations`,
+  RPC `activate_preview_plan`) — esquema en `supabase/schema.sql`.
+- **SQLite local** (`data/app.db`, vía `better-sqlite3` + Drizzle): `leads`,
+  `participants`, `subscribers` — capturas del embudo de marketing. El archivo se
+  crea solo en el primer arranque; **debe persistir en el servidor** (no se sube a git)
+  y debe incluirse en los backups del VPS.
 
-  const displayName = fullName ?? email;
-  // ...
-}
-```
+## Despliegue en un VPS con CloudPanel
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+1. **Crea un sitio Node.js en CloudPanel**: elige la versión de Node (`>=22.13`), y
+   define el puerto de la app (CloudPanel reverse-proxea tu dominio con Nginx + SSL
+   hacia ese puerto).
+2. **Sube el código** al directorio del sitio (git clone o deploy).
+3. **Variables de entorno**: crea `.env.local` en la raíz del proyecto (o cárgalas
+   desde el editor de variables de entorno de CloudPanel) con:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - `PORT` — el mismo puerto configurado en CloudPanel (si no lo define CloudPanel
+     automáticamente)
+   - `SQLITE_DB_PATH` (opcional) — ruta absoluta al archivo SQLite si no quieres usar
+     el default `./data/app.db`
+4. **Instala dependencias**: `pnpm install --no-frozen-lockfile` si tu lockfile
+   cambió, o `pnpm install` normalmente. `better-sqlite3` compila un addon nativo en
+   el `install`; si el VPS no tiene un binario prebuilt para tu plataforma, necesitas
+   build tools (`python3`, `make`, `g++`) instalados. Este repo ya trae
+   `pnpm-workspace.yaml` con `allowBuilds` aprobado para los paquetes nativos que
+   necesita (`better-sqlite3`, `esbuild`, `sharp`, `unrs-resolver`), así que
+   `pnpm install` no debería pedir aprobación interactiva.
+5. **Build**: `pnpm run build`.
+6. **Startup command**: configura CloudPanel para ejecutar `pnpm run start` (o
+   `node_modules/.bin/vinext start`) como comando de arranque del sitio Node.js.
+7. Verifica que el directorio `data/` (el archivo SQLite) sea persistente entre
+   despliegues y esté incluido en tus backups.
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+## Aprender más
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- [Documentación de vinext](https://github.com/cloudflare/vinext)
+- [Guía de Drizzle + better-sqlite3](https://orm.drizzle.team/docs/get-started/sqlite-new)
