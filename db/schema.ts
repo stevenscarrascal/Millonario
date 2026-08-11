@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const leads = sqliteTable("leads", {
   id: text("id").primaryKey(),
@@ -15,8 +15,11 @@ export const participants = sqliteTable("participants", {
   email: text("email").notNull(),
   phone: text("phone").notNull(),
   consent: integer("consent", { mode: "boolean" }).notNull().default(true),
+  organizationId: text("organization_id"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
+}, (table) => [
+  index("participants_organization_id_idx").on(table.organizationId),
+]);
 
 export const subscribers = sqliteTable("subscribers", {
   id: text("id").primaryKey(),

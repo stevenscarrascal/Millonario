@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS participants (
   email TEXT NOT NULL,
   phone TEXT NOT NULL,
   consent INTEGER NOT NULL DEFAULT 1,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  organization_id TEXT
 );
 CREATE TABLE IF NOT EXISTS subscribers (
   id TEXT PRIMARY KEY,
@@ -33,6 +34,13 @@ CREATE TABLE IF NOT EXISTS subscribers (
 );
 `;
 
+function ensureColumn(sqlite: Database.Database, table: string, column: string, definition: string) {
+  const columns = sqlite.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!columns.some((existing) => existing.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
 let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
 export function getDb() {
@@ -41,6 +49,8 @@ export function getDb() {
     const sqlite = new Database(DB_PATH);
     sqlite.pragma("journal_mode = WAL");
     sqlite.exec(BOOTSTRAP_SQL);
+    ensureColumn(sqlite, "participants", "organization_id", "TEXT");
+    sqlite.exec("CREATE INDEX IF NOT EXISTS participants_organization_id_idx ON participants (organization_id)");
     db = drizzle(sqlite, { schema });
   }
 

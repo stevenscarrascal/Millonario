@@ -22,6 +22,13 @@
       "when": 1786456724959,
       "tag": "0002_smiling_jane_foster",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1786465016636,
+      "tag": "0003_fearless_molecule_man",
+      "breakpoints": true
     }
   ]
 }
