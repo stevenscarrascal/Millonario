@@ -131,7 +131,7 @@ export function CertificateDocument({ data }: { data: CertificateData }) {
             <Text style={styles.grantedTo}>SE OTORGA EL PRESENTE CERTIFICADO A</Text>
             <Text style={styles.name}>{data.participantName}</Text>
             <View style={styles.nameUnderline} />
-            <Text style={styles.org}>{data.organizationName}</Text>
+           
 
             <Text style={styles.body}>
               por haber completado satisfactoriamente el reto de conocimientos en cumplimiento
