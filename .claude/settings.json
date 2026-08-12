@@ -104,7 +104,13 @@
       "Bash(pm2 delete *)",
       "Bash(pm2 start *)",
       "Bash(curl -s -o /dev/null -w \"http_code=%{http_code}\\\\n\" http://localhost:3345/)",
-      "Bash(pm2 status *)"
+      "Bash(pm2 status *)",
+      "Bash(node_modules/.bin/tsx scratch-render-test.mjs)",
+      "Bash(magick -density 150 certificate-preview.pdf -quality 92 certificate-preview.png)",
+      "Bash(where gswin64c *)",
+      "Bash(where pdftoppm.exe)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files \\\\\\(x86\\\\\\)/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\steve\\Downloads\\Millonario\\Millonario\\app\\api\\participants",
